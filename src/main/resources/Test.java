@@ -1,34 +1,18 @@
 public class Test {
-    private int f0;
-    private int f1;
+    public static void go() {
+        Container c1 = new Container();
+        Item i1 = new Item();
+        c1.setItem(i1);
 
-    public Test()
-    {
+        Container c2 = new Container();
+        Item i2 = new Item();
+        c2.setItem(i2);
+
+        Container c3 = c2;
+        c3.setItem(i1);
     }
 
-    public void setter_f0(int v)
-    {
-        f0 = v;
-    }
-
-    public void setter_f1(int v)
-    {
-        f1 = v;
-    }
-
-    public void print()
-    {
-        System.out.print("T{" + String.valueOf(f0) + "," + String.valueOf(f1) + "}");
-    }
-
-    public static void main(String[] args)
-    {
-        Test t = new Test();
-
-        t.setter_f0(1);
-        t.setter_f1(2);
-
-        t.print();
-        System.out.println();
+    public static void main(String[] args) {
+        go();
     }
 }
