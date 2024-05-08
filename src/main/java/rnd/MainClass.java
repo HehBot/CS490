@@ -2,16 +2,19 @@ package rnd;
 
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import soot.Local;
 import soot.MethodOrMethodContext;
-// import soot.PackManager;
+import soot.PointsToAnalysis;
 import soot.Scene;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
+import soot.dava.internal.AST.ASTTryNode.container;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Targets;
@@ -20,9 +23,23 @@ import soot.options.Options;
 public class MainClass {
     private static final String resDir = "./src/main/resources";
 
-    private static void runSpark() {
-        System.out.println("[spark] Starting analysis...");
+    public static void run(String processDir, String mainClass) {
+        String benchmarkPath = "./benchmarks/dacapo/batik";
+        Options.v().set_soot_classpath(benchmarkPath);
+        Options.v().prepend_classpath();
+        Options.v().set_whole_program(true);
+        Options.v().set_keep_line_number(true);
+        Options.v().no_bodies_for_excluded();
+        String[] inc = {"org.apache", "org.w3c"};
+        Options.v().set_include(Arrays.asList(inc));
+        Options.v().set_process_dir(Collections.singletonList(benchmarkPath));
+        String reflLogPath = "reflection-log:" + benchmarkPath + "/refl.log";
+        Options.v().setPhaseOption("cg", reflLogPath);
+        Options.v().set_main_class("Harness");
 
+        Scene.v().loadNecessaryClasses();
+
+        System.out.println("[spark] Starting analysis...");
         HashMap<String, String> opt = new HashMap<>();
         opt.put("enabled", "true");
         opt.put("verbose", "true");
@@ -35,32 +52,46 @@ public class MainClass {
         SparkTransformer.v().transform("", opt);
 
         System.out.println("[spark] Done!");
-    }
 
-    public static void run(List<String> processDir, String mainClass) {
-        Options.v().set_process_dir(processDir);
-        Options.v().set_whole_program(true);
-        Options.v().set_keep_line_number(true);
+        // String[] args = {
+        //     // "-cp", processDir, "-pp",
+        //     "-f", "c",
+        //     "-w",
+        //     "-keep-line-number",
+        //     "-no-writeout-body-releasing",
+        //     "-p", "cg.spark", "enabled:true",
+        //     "-p", "cg.spark", "verbose:true",
+        //     "-p", "cg.spark", "propagator:worklist",
+        //     "-p", "cg.spark", "simple-edges-bidirectional:false",
+        //     "-p", "cg.spark", "on-fly-cg:true",
+        //     "-p", "cg.spark", "set-impl:double",
+        //     "-p", "cg.spark", "double-set-old:hybrid",
+        //     "-p", "cg.spark", "double-set-new:hybrid",
+        //     "-process-dir", processDir,
+        //     "-main-class", mainClass
+        // };
 
-        Scene.v().loadNecessaryClasses();
-        Scene.v().setMainClass(Scene.v().getSootClass(mainClass));
-
-        runSpark();
+        // soot.Main.main(args);
     }
 
     public static void main(String[] args) throws Exception
     {
         System.out.println("Starting...");
 
-        run(Arrays.asList(resDir), "Test");
+        run(resDir, "Test");
 
-        System.out.println(("++++++++Classes and Methods++++++++++"));
+        System.out.println(("++++++++Classes, Fields and Methods++++++++++"));
 
         for (SootClass sc : Scene.v().getApplicationClasses()) {
             String s = sc.getName();
             System.out.println(s);
+            System.out.println("    Methods:");
             for (SootMethod m : sc.getMethods()) {
-                System.out.println("    " + m.getSignature());
+                System.out.println("        " + m.getSignature());
+            }
+            System.out.println("    Fields:");
+            for (SootField f : sc.getFields()) {
+                System.out.println("        " + f.getSignature());
             }
         }
 
@@ -80,10 +111,25 @@ public class MainClass {
         }
         System.err.println("Total Edges:" + numOfEdges);
 
-        System.out.println("+++++++++++++++SPARK++++++++++++++++++");
+        System.out.println("++++++++++Field Modifications+++++++++");
 
-        Map<Integer, Local> locals = SparkResult.getLocals(Scene.v().getSootClass("Test").getMethodByName("go"), "Container");
+        for (SootClass sc : Scene.v().getApplicationClasses()) {
+            Map<SootMethod, List<SootField>> modified = SparkResult.getFieldModifications(sc);
+            System.out.print(sc.toString() + " ");
+            System.out.println(modified);
+        }
 
-        SparkResult.printLocalInstersects(locals);
+        System.out.println("+++++++++++++++++SPARK++++++++++++++++");
+
+        for(SootClass sc : Scene.v().getApplicationClasses()){
+            for(SootMethod m : sc.getMethods()){
+                if (m.isConstructor())
+                    continue;
+                Map<Integer, Local> locals = SparkResult.getLocals(m);
+                System.out.println(m.getSignature());
+                SparkResult.printLocalInstersects(locals);
+                System.out.println();
+            }
+        }
     }
 }
