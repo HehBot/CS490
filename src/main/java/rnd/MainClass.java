@@ -23,19 +23,17 @@ import soot.options.Options;
 public class MainClass {
     private static final String resDir = "./src/main/resources";
 
-    public static void run(String processDir, String mainClass) {
-        String benchmarkPath = "./benchmarks/dacapo/batik";
-        Options.v().set_soot_classpath(benchmarkPath);
-        Options.v().prepend_classpath();
+    public static void run(List<String> processDir, String mainClass) {
         Options.v().set_whole_program(true);
         Options.v().set_keep_line_number(true);
         Options.v().no_bodies_for_excluded();
         String[] inc = {"org.apache", "org.w3c"};
         Options.v().set_include(Arrays.asList(inc));
-        Options.v().set_process_dir(Collections.singletonList(benchmarkPath));
-        String reflLogPath = "reflection-log:" + benchmarkPath + "/refl.log";
-        Options.v().setPhaseOption("cg", reflLogPath);
-        Options.v().set_main_class("Harness");
+        Options.v().set_process_dir(processDir);
+        // String reflLogPath = "reflection-log:" + benchmarkPath + "/refl.log";
+        // Options.v().setPhaseOption("cg", reflLogPath);
+        // Options.v().set_main_class("Harness");
+        Options.v().set_main_class(mainClass);
 
         Scene.v().loadNecessaryClasses();
 
@@ -78,7 +76,7 @@ public class MainClass {
     {
         System.out.println("Starting...");
 
-        run(resDir, "Test");
+        run(Arrays.asList(resDir), "Test");
 
         System.out.println(("++++++++Classes, Fields and Methods++++++++++"));
 
